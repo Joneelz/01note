@@ -16,7 +16,7 @@
 			<option value="/">/</option>
 		</select>
 		<input type="text" v-model="n2">
-		<input type="button" value="=" v-on:click="calc()">
+		<input type="button" value="=" v-on:click="calc">
 		<input type="text" v-model="res">
 	</div>
 
