@@ -1,0 +1,8 @@
+截屏：Snipaste
+取色：ScreenToolKit
+win桌面：	Dynamic theme
+数据库：Navicat
+鼠标连点器：鼠大侠
+md文档：typora
+git工具：TortoiseGit
+PDF: 极速PDF阅读器
