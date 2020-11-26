@@ -420,6 +420,8 @@ const readdir = promisify(fs.readdir);
 
 ## 7、fs模块
 
+第三方库，mkdirp：可递归创建文件夹，fs-extra：fs的扩展模块，方便操作文件系统
+
 - fs.readFile(path[, options], callback) 
 
   ```js
@@ -1781,9 +1783,8 @@ res.cookie('name', 'jonee', {
       }
   }));
   ```
-```
   
-该库提供的是一个中间件方法，有以下参数：
+  该库提供的是一个中间件方法，有以下参数：
   
   | 参数              | 描述                                                         |
   | :---------------- | :----------------------------------------------------------- |
@@ -1796,43 +1797,42 @@ res.cookie('name', 'jonee', {
   | saveUninitialized | 是指无论有没有 session cookie,每次请求都设置个 session cookie,默认给个标示为 connect.sid |
   | resave            | 是指每次请求都重新设置 session coiecookie假设你的是10分钟过期,每次请求都会再设置10分钟 |
   
-  注：store在未设置时默认保存在内存中，若需保存在其它地方，需使用第三方或自定义库，该库需提供set和		get等方法，可自定义一个store，将session保存在文件中
-  
-  ```js
-  //   ./store文件
-  let util = require('util');
-  let fs = require('fs');
-  let path = require('path');
-  let mkdirp = require('mkdirp');
-  module.exports = function (session) {
-      let Store = session.Store;
-      util.inherits(FileStore, Store);
-      function FileStore(options) {
-          //Store.call(this);
-          let { root } = options;//root就是存放session文件的根目录 
-          this._maxAge = options.maxAge || 0;;//最长存活时间
-          this.root = root;
-          mkdirp.sync(root); //根据路径创建对应文件或文件夹
-      }
-  
-      FileStore.prototype.resolve = function (sid) {
-          return path.join(this.root, sid + '.json');
-      }
-      FileStore.prototype.set = function (sid, session, callback) {
-          fs.writeFile(this.resolve(sid), JSON.stringify(session), callback)
-      }
-      FileStore.prototype.get = function (sid, callback) {
-          fs.readFile(this.resolve(sid), 'utf8', function (err, data) {
-              if (err) callback(err);
-              data = JSON.parse(data);
-              callback(null, data);
-          });
-      }
-      FileStore.prototype.destroy = function (sid, callback) {
-          fs.unlink(this.resolve(sid), callback);
-      }
-      return FileStore;
-  }
+    注：store在未设置时默认保存在内存中，若需保存在其它地方，需使用第三方或自定义库，该库需提供set和get等方法，可自定义一个store，将session保存在文件中
+```js
+//   ./store文件
+let util = require('util');
+let fs = require('fs');
+let path = require('path');
+let mkdirp = require('mkdirp');
+module.exports = function (session) {
+    let Store = session.Store;
+    util.inherits(FileStore, Store);
+    function FileStore(options) {
+        //Store.call(this);
+        let { root } = options;//root就是存放session文件的根目录 
+        this._maxAge = options.maxAge || 0;;//最长存活时间
+        this.root = root;
+        mkdirp.sync(root); //根据路径创建对应文件或文件夹
+    }
+
+    FileStore.prototype.resolve = function (sid) {
+        return path.join(this.root, sid + '.json');
+    }
+    FileStore.prototype.set = function (sid, session, callback) {
+        fs.writeFile(this.resolve(sid), JSON.stringify(session), callback)
+    }
+    FileStore.prototype.get = function (sid, callback) {
+        fs.readFile(this.resolve(sid), 'utf8', function (err, data) {
+            if (err) callback(err);
+            data = JSON.parse(data);
+            callback(null, data);
+        });
+    }
+    FileStore.prototype.destroy = function (sid, callback) {
+        fs.unlink(this.resolve(sid), callback);
+    }
+    return FileStore;
+}
 ```
 
 - 当使用了session中间件后，
@@ -2046,6 +2046,24 @@ class Koa {
 module.exports = Koa;
 ```
 
+## 9、常用中间件
+
+| 中间件         | 作用                                                |
+| :------------- | :-------------------------------------------------- |
+| koa-body       | 可以实现文件上传，同时也可以让koa能获取post请求参数 |
+| koa-json-error | 错误处理中间件 可配置环境是否返回stack              |
+| koa-parameter  | 校验请求参                                          |
+| koa-router     | 路由中间件                                          |
+| koa-static     | 处理静态资源                                        |
+| koa-jwt        | 权限控制中间件                                      |
+| koa-log4       | 日志处理模块                                        |
+| jsonwebtoken   | 用于鉴权与认证                                      |
+| mongoose       | 链接mongodb数据库                                   |
+| nodemon        | 检测本地文件改动自动重启服务                        |
+| cross-env      | 运行跨平台设置和使用环境变量的脚本。                |
+| xml2js         | 将xml转换为js对象                                   |
+| sha1           | sha1加密算法                                        |
+
 # mongoDB
 
 ## 1、介绍
@@ -2083,7 +2101,7 @@ module.exports = Koa;
    port=5000
    ```
 
-   **`mongod --config mongo.conf`来启动**
+   **`mongod --config mongo.conf`来启动**   
 
    **`mongo --port 5000`来连接**
 
@@ -2108,6 +2126,7 @@ module.exports = Koa;
 
   ```js
    mongod --dbpath=./data  // 指定数据库所在目录
+   mongod --dbpath=./data --auth    //安全方式启动数据库,连接时需用户名和密码
   ```
 
 - 使用命令行连接服务并简单操作
@@ -2210,42 +2229,43 @@ db.collection.update(
   )
   ```
 
-- runCommand，执行命令
 
-  `db.runCommand()` 可在连接数据库的命令行操作，也可执行文件
+### 7.3 使用命令 runCommand
 
-  1. 先定义一个命令文件为index.js
-  
-     ```js
-     var command = {
-       findAndModify: 'students', //要操作的集合
-       query: { name: 'joiner' },// 查询条件, 指定操作的集合的范围
-       update: { $set: { age: 1010 } }, //指定如何更新,就是把年龄改为100岁
-       fields: { age: true, name: true, _id: false }, // 指定返回的字段,false为不返回
-       sort: { age: 1 }, //按age进行升序排列
-       new: true // 是否返回更新后的文档，true为是
-     }
-     var db = connect('school') //连接数据库
-     var result = db.runCommand(command) //执行命令返回结果
-   printjson(result)
-     ```
+`db.runCommand()` 可在连接数据库的命令行操作，也可执行文件
 
-     批量向数据库中插入1000条数据
-  
-     ```js
-     var db = connect('school') //连接数据库
-     var stu = []
-     for (var i = 0; i < 1000; i++) {
-       stu.push({ name: 'joiner' + i, age: i })
-     }
-   db.students.insert(stu)
-     ```
+1. 先定义一个命令文件为index.js
 
-  2. 在命令行执行`mongo ./index.js`
-  
-  3. 若已使用mongo连接了数据库，则直接使用`load(./index)`即可
+   ```js
+   var command = {
+     findAndModify: 'students', //要操作的集合
+     query: { name: 'joiner' },// 查询条件, 指定操作的集合的范围
+     update: { $set: { age: 1010 } }, //指定如何更新,就是把年龄改为100岁
+     fields: { age: true, name: true, _id: false }, // 指定返回的字段,false为不返回
+     sort: { age: 1 }, //按age进行升序排列
+     new: true // 是否返回更新后的文档，true为是
+   }
+   var db = connect('school') //连接数据库
+   var result = db.runCommand(command) //执行命令返回结果
+ printjson(result)
+   ```
 
-### 7.3删除文档
+   批量向数据库中插入1000条数据
+
+   ```js
+   var db = connect('school') //连接数据库
+   var stu = []
+   for (var i = 0; i < 1000; i++) {
+     stu.push({ name: 'joiner' + i, age: i })
+   }
+ db.students.insert(stu)
+   ```
+
+2. 在命令行执行`mongo ./index.js`
+
+3. 若已使用mongo连接了数据库，则直接使用`load(./index)`即可
+
+### 7.4删除文档
 
 ```js
 db.collection.remove(
@@ -2256,9 +2276,11 @@ db.collection.remove(
 )
 
 db.students.remove({name:'joiner'})
+
+db.runCommand({drop:'students'}) //用命令的方法删除
 ```
 
-### 7.4查询文档
+### 7.5查询文档
 
 - 查询所有文档
 
@@ -2411,9 +2433,228 @@ db.runCommand({fsync:1,lock:1}) //清空缓存区，将锁定数据库，此时�
 db.fsyncUnlock() //解锁数据库
 ```
 
+## 11、安全措施
+
+### 11.1 查看角色 
+
+```js
+show roles
+```
+
+内置角色
+
+- 数据库用户角色:read、 readWrite
+
+- 数据库管理角色: dbAdmin、 dbowner、 userAdmin
+
+- 集群管理角色: clusterAdmin、 clusterManager、 clusterMonitor 、hostManage
+
+- 备份恢复角色: backup、 restore; 
+
+- 所有数据库角色: readAnyDatabase、 readWriteAnyDatabase、 userAdminAnyDatabase、 dbAdminAnyDatabase 
+
+- 超级用户角色:root 
+
+- 内部角色: __system
+
+### 11.2 创建用户
+
+```js
+use school //先切换到数据库，
+db.createUser({
+    user:'joiner', 
+    pwd:'123456',
+    roles:[{   //设置权限
+        db:'school', //创建该数据库的用户
+        role:'read'	 //该用户对该数据库的权限
+    },
+     'read', //如不设置具体db，则其它数据库均有可读权限
+  ]
+})
+```
+
+## 12、高级命令
+
+### 12.1查找不重复的值
+
+```js
+db.runCommand({distinct:'students',key:'home'}) //查询数据库students中key为home的数据
+```
+
+### 12.2 分组group
+
+```js
+db.runCommand({
+    group:{
+        ns:'集合名称',
+        key:'分组的键',
+        initial:'初始值',
+        $reduce:'分解器',
+        condition:'条件',
+        finalize:'完成时的处理器'
+    }
+})
+//案例 
+db.runCommand({
+  group: {
+    ns: 'students',
+    key: { home: true },
+    initial: { total: 0 },
+    $reduce: function (doc, result) {
+      result.total += doc.age;
+    },
+    condition: { age: { $gt: 1 } },
+    finalize: function (result) {
+      result.desc = '本城市的总年龄为' + result.total;
+    }
+  }
+});
+```
+
+### 12.3 runCommand常用命令
+
+```js
+db.runCommand({buildInfo:1}) //查看信息
+db.runCommand({getLastError:'students'}) //查看students数据库最后一次的错误
+```
+
+## 13、固定集合
+
+集合的文档数和文档大小是固定的，超过固定大小后，后插入的数据会覆盖之前的数据，通过 createCollection来创建一个固定集合,且 capped选项设置为true
+
+```js
+db.logs.isCapped() //判断logs集合是否为固定集合
+
+//size是整个集合空间大小,单位为【KB】,max是集合文档个数上线,单位是【个】, capped封顶，给true
+db.createCollection('logs', {size: 50, max: 5, capped: true});
+
+db.runCommand({convertToCapped: "logs",size: 5)); //非固定集合转为固定集合
+```
+
+## 14、文件系统gridfs
+
+gridfs是mongodb自带的文件系统,使用二进制存储文件，可以以BSON格式保存二进制对象，BSON对象的体积不能超过4M。所以 mongodb提供了 mongofiles。它可以把一个大文件透明地分割成小文件(256K),从而保存大体积的数据。
+
+- GridFS用于存储和恢复那些超过16M(BSON文件限制)的文件(如:图片、音频、视频等)。
+
+- GridFS用两个集合来存储一个文件:fs. files与fs. chunks
+
+- 每个文件的实际内容被存在 chunks(二进制数据)中,和文件有关的meta数据(filename,content_type,还有用户自定义的属性)将会被存在 files集合中。
+
+```js
+//将test.txt上传到myfiles中
+mongofiles -d myfiles put test.txt  //-d数据库名称  -l源文件位置   -put指定文件名
+
+mongofiles -d myfiles get test.txt //获取并下载文件
+
+mongofiles -d myfiles list //查看所有文件
+
+mongofiles -d myfiles delete test.txt //删除文件
+```
+
+- eval服务器端脚本,可以执行js语句，定义js全局变量，定义函数
+
+  ```js
+  db.eval("1+1");
+  db.eval("return hello'");
+  db.system.js.insert({ _id: "x", value: 1 });
+  db.eval("return x")
+  db.system.js.insert({ id: "say", value: function () { return 'hello' } });
+  db.eval("say()");
+  ```
+
+## 15、索引
+
+## 16、mongoose
+
+## 17、插件，聚合，虚拟属性等
 
 
 
+
+
+# myslq
+
+## 1、安装和配置 
+
+官网下载安装，配置文件：安装目录的`my.ini`文件
+
+- port端口号
+- basedir安装目录
+- datadir数据存放访目录
+- charcter-set-server字符集
+- default-storage-engine 存储引擎
+- sqlmode 语法模式
+- max-connections 最大连接数
+
+## 2、基本操作
+
+```js
+net start MySQL  //启动数据库，实际启动的是安装目录下的mysqld可执行文件
+net stop MySQL  //停止数据库
+
+mysql -h 127.0.0.1 -p3306 -uroot -p123456   //连接数据库
+exit //断开连接
+
+show databases; //查看已有数据库
+use test; //切换数据库
+
+show tables //显示有哪些表
+show tables from mysql  //查看mysql中有哪些表
+
+desc student  //查看当前数据库中的表结构
+select database(); //查看并返回当前数据库
+```
+
+## 3、数据完整性
+
+日期时间型：year   timstamp   time  date   datetime
+
+字符串型：set	enum	blob	text	varchar	char
+
+数值型：整数 tinyint	smallint	mediumint	int	bigint	
+
+​			   小数--浮点：float	Double
+
+​			   小数--定点：decimal
+
+## 4、SQL
+
+### 1.查询语句
+
+```sql
+-- CONCAT是一个内置函数，可以实现字符串的连接
+SELECT CONCAT(firstName,lastName) FROM users;
+--操作符 AND OR NOT BETWEEN
+-- age大于10并且小于20
+SELECT * FROM users WHERE age>10 AND age<20  
+-- age不大于10并且不小于20
+SELECT * FROM users WHERE NOT(age>10 AND age<20) 
+-- age在20至50中间
+SELECT * FROM users WHERE age BETWEEN 20 AND 50 
+-- 查询年龄等于12或18
+SELECT * FROM users WHERE age IN (12,18)
+-- 查询年龄不等于12或18
+SELECT * FROM users WHERE age NOT IN (12,18)
+```
+
+### 2. 插入语句
+
+```sql
+INSERT [INTO] 表名 [(列名)] VALUES (值列表)
+-- 向表中插入一条数据，可以省略列名，但需输入完整的字段（包含列名）
+INSERT INTO users(firstName,lastName,age,birthday) VALUES('赵','六','100','1984-2-12')
+```
+
+### 3.更新语句
+
+```SQL
+UPDATE 表名 列名=更新值 [WHERE 更新条件]
+--更新语句
+UPDATE users SET age=16,birthday='1993-09-03' WHERE id=3
+-- 将email为null的列更新
+UPDATE users SET email = '7@qq.com' WHERE email IS NULL 
+```
 
 
 
