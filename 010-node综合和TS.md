@@ -2623,6 +2623,8 @@ select database(); //查看并返回当前数据库
 ### 1.查询语句
 
 ```sql
+-- ASC：升序   DESC：降序
+SELECT <列名> FROM <表名> [WHERE <查询条件表达式>] [ORDER BY <排序的列名>[ASC或DESC]]
 -- CONCAT是一个内置函数，可以实现字符串的连接
 SELECT CONCAT(firstName,lastName) FROM users;
 --操作符 AND OR NOT BETWEEN
@@ -2636,6 +2638,12 @@ SELECT * FROM users WHERE age BETWEEN 20 AND 50
 SELECT * FROM users WHERE age IN (12,18)
 -- 查询年龄不等于12或18
 SELECT * FROM users WHERE age NOT IN (12,18)
+-- 查询home为‘北京’，按年龄进行降序排列
+SELECT * FROM users WHERE home='北京' ORDER BY age DESC
+--查询今天过生日的人
+SELECT * FROM users WHERE DAY(NOW()) = DAY(birthday) AND MONTH(NOW()) = MONTH(birthday)
+--根据生日查询年龄
+SELECT name,YEAR(NOW())-YEAR(birthday) FROM users
 ```
 
 ### 2. 插入语句
@@ -2654,9 +2662,143 @@ UPDATE 表名 列名=更新值 [WHERE 更新条件]
 UPDATE users SET age=16,birthday='1993-09-03' WHERE id=3
 -- 将email为null的列更新
 UPDATE users SET email = '7@qq.com' WHERE email IS NULL 
+-- 将email不为null的列更新
+UPDATE users SET email = '7@qq.com' WHERE email IS NOT NULL 
 ```
 
+### 4.删除语句
 
+如果在删除主表数据，则要先删除子表记录
+
+```sql
+DELETE [FROM] 表名 [WHERE <删除条件>]
+--删除id为7的记录
+DELETE FROM users WHERE id=7
+--删除整张表(主键会保留,能恢复)
+DELETE FROM users
+--删除整张表(全部删除，无法恢复)
+TRUNCATE TABLE users
+```
+
+### 5.函数
+
+#### 5.1字符函数
+
+| 函数名称  | 描述                           |语句|
+| --------- | ------------------------------ | --------- |
+| CONCAT    | 字符串连接                     |SELECT CONCAT(last_name,'_',first_name) FROM users|
+| CONCAT_WS | 使用指定分隔符进行字符连接     ||
+| FORMAT    | 数字格式化                     |SELECT FORMAT(10000.178,2)|
+| LOWER     | 转小写字母                     |SELECT LOWER('ABC') FROM users|
+| UPPER     | 转大写字母                     |SELECT UPPER('abc') FROM users|
+| LEFT      | 返回字符串s开始的最左边n个字符 |SELECT LEFT('abc123',3)|
+| RIGHT     | 返回字符串s开始的最左边n个字符 |SELECT RIGHT('abc123',3)|
+| SUBSTR | 截取字符串 |SELECT SUBSTR('zfpx',2)<br />SELECT SUBSTR('zfpx',2,3)|
+
+#### 5.2数字函数
+
+| 函数名称 | 描述       | 语句                                           |
+| -------- | ---------- | ---------------------------------------------- |
+| CEIL     | 向上取整   | SELECT CEIL(1.2)                               |
+| FLOOR    | 向下取整数 |                                                |
+| DIV      | 取整数     |                                                |
+| MOD      | 取余       |                                                |
+| POWER    | 幂运算     |                                                |
+| ROUND    | 四舍五入   | SELECT ROUND(2.5)  <br />SELECT ROUND(2.555,2) |
+| TRUNCATE | 数字截取   | SELECT TRUNCATE(12.12312,3)                    |
+
+#### 5.3日期函数
+
+| 函数名称     | 描述                 | 语句                                                         |
+| ------------ | -------------------- | ------------------------------------------------------------ |
+| NOW          | 当前日期和时间       | SELECT NOW()                                                 |
+| CURDATE      | 当前日期             |                                                              |
+| CURTIME      | 当前时间             |                                                              |
+| DATE_ADD     | 日期增加             | SELECT DATE_ADD(NOW(),INTERVAL 3 MONTH)<br />//当前日期增加3个月 |
+| DATEDIFF     | 计算两个时间的时间差 | SELECT DATEDIFF(DATE_ADD(NOW(),INTERVAL 3 DAY),NOW())        |
+| DATE_FORMATE | 日期格式化           | SELECT DATE_FORMAT(NOW(),'%Y年%m月%d日  %H时%i分%s秒')       |
+
+#### 5.4其它函数
+
+| 名称           | 描述                     | 语句                                                         |
+| -------------- | ------------------------ | ------------------------------------------------------------ |
+| CONNECTION     | 当前连接数据的ID号       | SELECT CONNECTION_ID()                                       |
+| DATABASE       | 查看当前数据库           | SELECT DATABASE()                                            |
+| VERSION        | 查看数据库版本号         | SELECT VERSION()                                             |
+| LAST_INSERT_ID | 查看最后一条插入数据的id | SELECT LAST_INSERT_ID()                                      |
+| user           | 查看当前登录的用户名     | SELECT USER()                                                |
+| MD5            | 获取一个值的摘要算法     | SELECT MD5('123456')                                         |
+| PASSWORD       | 修改当前用户的密码       | SELECT PASSWORD('123456')<br />SELECT User,Password from mysql.user |
+
+#### 5.5流程控制函数
+
+| 名称 | 描述 | 语句                                                         |
+| ---- | ---- | ------------------------------------------------------------ |
+| IF   | 判断 | SELECT IF(gender=1,'男','女') FROM users                     |
+| CASE | 判断 | SELECT <br />students,CASE grade <br />WHEN grade>90 then '优秀'<br />WHEN grade>70 then '良好'<br />ELSE '不及格'<br />FROM users |
+
+#### 5.6模糊查询
+
+| 通配符 | 解释                             | 示例                      | 符合条件的值                 |
+| ------ | -------------------------------- | ------------------------- | ---------------------------- |
+| _      | 一个字符                         | LINK 'a_'                 | as，ad等                     |
+| %      | 任意长度的字符串                 | LIKE 'c%'<br />LIKE '%c%' | code，cat等<br />所有包含c的 |
+| []     | 括号中所指定范围内的一个字符     | LIKE '1[35]5'             | 135或155                     |
+| [^]    | 不在括号中所指定范围内的一个字符 | `LIKE '1[^1-2]5'`         | 135或185等                   |
+
+### 6.聚合查询
+
+对一组值进行计算，并返回计算后的值，一般用来统计数据
+
+```sql
+-- 在score表中查询grade的和
+SELECT SUM(grade) FROM score
+-- 查询grade的最大值
+SELECT MAX(grade) FROM score
+-- 查询grade的最小值
+SELECT MIN(grade) FROM score
+-- 查询grade的最平均值，并四舍5入
+SELECT ROUND(AVG(grade),0) FROM score
+-- 查询数据的条数(不包含null)
+SELECT COUNT(grade) FROM score
+-- 查询数据的条数(只要一行有数据就计作一条)
+SELECT COUNT(*) FROM score
+```
+
+### 7.分组
+
+按某的值进行分组
+
+```sql
+-- 注：SELECT列表中只能包含被分组的列
+SELECT 列名，表询表达式 FROM <表名> WHERE <条件> GROUP BY <分组字段> 
+HAVING 分组后的过渡条件 ORDER BY 列名 [ASC,DESC] LIMIT 偏移量，条数
+
+-- 从score表中将结果按student_id分组，并返回stduent_id和成绩（grade）的平均值
+SELECT student_id,AVG(grade) FROM score GROUP BY student_id;
+```
+
+### 8.子查询
+
+查询语句中用小括号嵌套语句
+
+```sql
+-- 查询年龄大于平均年龄的学生
+SELECT * FROM sudent WHERE age > (SELECT ROUND(AVG(age),2) FROM student)
+```
+
+### 9.表连接
+
+```sql
+-- 从score,student,course三张表中查询 score.student_id = studend.id AND score.course_id = course.id的数据
+SELECT student.name,course.name,score.grade FROM score,student,course 
+WHERE score.student_id = studend.id AND score.course_id = course.id
+
+-- 等同于
+SELECT student.name,course.name,score.grade FROM score 
+INNER JOIN student on score.student_id = student.id 
+INNER JOIN course on score.course_id = course.id
+```
 
 
 
