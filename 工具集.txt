@@ -6,3 +6,17 @@ win桌面：	Dynamic theme
 md文档：typora
 git工具：TortoiseGit
 PDF: 极速PDF阅读器
+vscode：1.50版本
+
+vscode插件：
+favorites
+Auto Rename Tag
+Beautify
+Bracket Pair Colorizer
+Code Runner
+Code Spell Checker
+ESLint
+Path Intellisense
+Prettier - Code formatter
+Tabnine
+View In Browser
