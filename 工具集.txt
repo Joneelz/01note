@@ -7,6 +7,8 @@ md文档：typora
 git工具：TortoiseGit
 PDF: 极速PDF阅读器
 vscode：1.50版本
+Beyond Compare: 文本比对工具
+向日葵： 远程工具
 
 vscode插件：
 favorites
