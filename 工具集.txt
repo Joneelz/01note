@@ -22,3 +22,4 @@ Path Intellisense
 Prettier - Code formatter
 Tabnine
 View In Browser
+live server

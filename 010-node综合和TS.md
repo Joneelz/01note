@@ -13,6 +13,74 @@ __webpack_require__.p : output配置项中的publicPath属性；
 
 # node
 
+各种库总结：https://github.com/huaize2020/awesome-nodejs/blob/main/README-zh-CN.md
+
+## 0、Node部分模块
+
+- url 模块-----解析 url
+
+  ```js
+  const url = require("url"); //直接引入
+  let obj = url.parse("https://locathost:3000?a=1&b=2", true); //true可将query分隔成对象
+  console.log(obj);
+  ```
+
+- querystring 模块----解析 url 中参数
+
+  ```js
+  const querystring = require("querystring"); //直接引入
+  let str = "wd=abcdd&rsv_spt=1";
+  let obj = querystring.parse(str); //将参数解析成对象
+  console.log(obj);
+  ```
+
+- uuid 模块----生成 uuid 号
+
+  ```js
+  const uuid = require("uuid/v4"); //需安装后引入
+  console.log(uuid().replace(/\-/g, ""));
+  ```
+
+- dns 模块
+
+  ```js
+  const dns = require("dns");
+
+  dns.lookup("www.baidu.com", (err, data) => {
+    //根据域名查ip
+    if (err) {
+      console.log("错了");
+    } else {
+      console.log(data);
+    }
+  });
+
+  let ip = "111.206.223.206"; //根据ip查域名
+  dns.lookupService(ip, 80, (err, data) => {
+    if (err) {
+      console.log("错了", err);
+    } else {
+      console.log(data);
+    }
+  });
+  ```
+
+- assert 断言
+
+  ```js
+  const assert = require("assert");
+  function calc(a, b) {
+    //对参数校验，不符合要求抛出错误
+    assert(
+      typeof a == "number" && typeof b == "number",
+      "除法中两个东西，都得是数字"
+    );
+    assert(b != 0, "分母不能是0");
+    return a / b;
+  }
+  console.log(div("a c", 0));
+  ```
+
 ## 1、process --当前进程
 
 ```js
@@ -420,7 +488,19 @@ const readdir = promisify(fs.readdir);
 
 ## 7、fs模块
 
-第三方库，mkdirp：可递归创建文件夹，fs-extra：fs的扩展模块，方便操作文件系统
+第三方库，mkdirp：可递归创建文件夹，fs-extra：fs的扩展模块，方便操作文件系统， glob：匹配文件或文件夹
+
+```js
+var glob = require("glob")
+// options is optional
+glob("**/*.js", options, function (er, files) {
+  // files is an array of filenames.
+  // If the `nonull` option is set, and nothing
+  // was found, then files is ["**/*.js"]
+  // er is an error object or null.
+})
+glob.sync('./src/pages/**/*.vue').forEach
+```
 
 - fs.readFile(path[, options], callback) 
 
@@ -595,6 +675,38 @@ const readdir = promisify(fs.readdir);
   ```
 
 ## 9、stream流
+
+  ```js
+ // 读取流，写入流，读写流(压缩，加密)
+  const fs = require("fs");
+  let rs = fs.createReadStream("www/1.html"); //创建一个读取流
+  let ws = fs.createWriteStream("www/2.html"); //创建一个写入流
+
+  rs.pipe(ws); //通过管道符pipe将读取流传入写入流
+
+  rs.on("error", (err) => {
+    //读取错误触发
+    console.log("读取失败");
+  });
+  ws.on("end", () => {
+    console.log("读取完成");
+  });
+  ws.on("error", (err) => {
+    console.log("写入失败");
+  });
+  ws.on("finish", () => {
+    console.log("写入完成");
+  });
+
+  // 通过流对读取文件压缩
+  const fs = require("fs");
+  const zlib = require("zlib");
+
+  let gz = zlib.createGzip();
+  let rs = fs.createReadStream("www/2.png");
+  let ws = fs.createWriteStream("www/2.png.gz");
+  rs.pipe(gz).pipe(ws);
+  ```
 
 ### 1 可读流 
 
@@ -1031,6 +1143,33 @@ req.end();
 
 ## 12、zlib压缩和解压模块
 
+- zlib 压缩模块（需设置响应头）
+
+  ```js
+    const http = require("http");
+    const fs = require("fs");
+    const url = require("url");
+    const zlib = require("zlib"); //引入压缩模块
+  
+    http
+      .createServer((req, res) => {
+        let { pathname, query } = url.parse(req.url, true);
+        res.setHeader("Content-Encoding", "gzip"); //需设置响应头，否则浏览器无法正常解析
+  
+        let rs = fs.createReadStream(`www${pathname}`); //创建读取流
+        let gz = zlib.createGzip(); //创建压缩
+  
+        rs.pipe(gz).pipe(res); //通过管道将读取流压缩，并返回响应
+  
+        rs.on("error", function () {
+          res.writeHeader(404);
+          res.write("not found");
+          res.end();
+        });
+      })
+      .listen(8080);
+  ```
+
 - 可读流的压缩方法
 
   ```js
@@ -1070,6 +1209,17 @@ req.end();
   ```
 
 ## 13、crypto加密和解密
+
+```js
+  // crypto 加密模块
+  const crypto = require("crypto");
+  let hash = crypto.createHash("md5"); //md5  sha1  sha256  sha512  ripemd160
+  //hash.update()方法将字符串相加，然后在hash.digest()将字符串加密返回
+  //hash.update('abcdef'); 一次和分开写是一样效果
+  hash.update("abc");
+  hash.update("def");
+  console.log(hash.digest("hex")); //以16进度输出
+```
 
 node中使用OpenSSL类库作为内部实现加密解密的手段，windows需要下载OpenSSL
 
@@ -1406,7 +1556,207 @@ let server = http.createServer(function (req, res) {
 server.listen(8080);
 ```
 
+## 21 处理 post 请求方法
 
+```js
+let server = http.createServer((req, res) => {
+  //GET数据获取方法
+  let { pathname, query } = url.parse(req.url, true);
+  //POST数据获取方法
+  let aBuffer = []; //使用数组保存post提交的数据
+  req.on("data", (data) => {
+    aBuffer.push(data);
+  });
+  req.on("end", () => {
+    let data = Buffer.concat(aBuffer); //提交完成后将数据保存在Buffer中
+    //post请求的请求头以'multipart/form-data'开头
+    if (req.headers["content-type"].startsWith("multipart/form-data")) {
+      let post = {};
+      let files = {};
+      //提取分隔符
+      const boundary =
+        "--" + req.headers["content-type"].split("; ")[1].split("=")[1];
+      //第一步、用分隔符切分
+      let arr = data.split(boundary);
+      //第二步、扔掉头尾(<>、<--\r\n>)
+      arr.shift();
+      arr.pop();
+      //第三步、每一项的头尾扔掉(\r\n....\r\n)
+      arr = arr.map((item) => item.slice(2, item.length - 2));
+      //第四步、找第一个"\r\n\r\n"，一切两半——前一半:信息，后一半:数据
+      arr.forEach((item) => {
+        let n = item.indexOf("\r\n\r\n");
+        let info = item.slice(0, n);
+        let data = item.slice(n + 4);
+        info = info.toString();
+        let total = 0;
+        let complete = 0;
+        if (info.indexOf("\r\n") == -1) {
+          //只有一行——普通数据
+          let key = common.parseInfo(info).name;
+          let val = data.toString();
+          post[key] = val;
+        } else {
+          //两行——文件数据
+          total++;
+          let json = common.parseInfo(info);
+          let key = json.name;
+          let filename = json.filename;
+          let type = json["Content-Type"];
+          let filepath = `upload/${uuid().replace(/\-/g, "")}${path.extname(
+            filename
+          )}`;
+          files[key] = { filename, type, filepath };
+          fs.writeFile(filepath, data, (err) => {
+            if (err) {
+              console.log("文件写入失败");
+            } else {
+              console.log("写入完成");
+              complete++;
+              console.log(post, files);
+            }
+          });
+        }
+      });
+    } else {
+      //urlencoded
+      let post = querystring.parse(data.toString());
+      console.log(post);
+    }
+  });
+});
+server.listen(8080);
+```
+
+## 22 基于 events 的 router
+
+1. 原理
+
+   ```js
+   const Event = require("events").EventEmitter; //EventEmitter——事件队列
+   let ev = new Event();
+   //ev监听
+   ev.on("blue", (a, b, c, d) => {
+     console.log("接收到了1个事件：", a, b, c, d);
+   });
+   ev.on("blue", (a, b, c, d) => {
+     //相同事件名可再次触发
+     console.log("接收到了2个事件：", a, b, c, d);
+   });
+
+   //ev触发
+   let res = ev.emit("blue", 12, 5, 8, 99); //返回是否触发成功
+   console.log("emit", res);
+   ```
+
+2. router 文件
+
+   ```js
+   //router.js
+   const Event = require("events").EventEmitter;
+   module.exports = new Event();
+   ```
+
+3. 主文件（定义 send 方法，获取入参并触发相关方法）
+
+   ```js
+   const http = require("http");
+   const fs = require("fs");
+   const url = require("url");
+   const router = require("./libs/router"); //导入自定义的router
+   const zlib = require("zlib");
+
+   http
+     .createServer((req, res) => {
+       let { pathname, query } = url.parse(req.url, true); //获取入参
+       req.query = query; //将获取入参挂在req上
+
+       res.send = function (data) {
+         //给res增加一个send方法
+         if (!(data instanceof Buffer) && typeof data != "string") {
+           data = JSON.stringify(data);
+         }
+         res.write(data);
+       };
+
+       //不是一个接口处理
+       if (false == router.emit(pathname, req, res)) {
+         //pathname没有触发成功
+         let rs = fs.createReadStream(`www${pathname}`); //2.读取文件
+         let gz = zlib.createGzip();
+         res.setHeader("Content-Encoding", "gzip");
+         rs.pipe(gz).pipe(res);
+         rs.on("error", (err) => {
+           //3.读取失败
+           res.writeHeader(404);
+           res.write("not found");
+           res.end();
+         });
+       } else {
+         //是接口，处理方法相同
+       }
+     })
+     .listen(8080);
+   ```
+
+4. 处理路由文件
+
+   ```js
+   const router=require('./router'); //导入上述router文件
+   router.on('/login', (req, res)=>{
+     let {user, pass}=req.query; //获取挂在req上的入参
+     res.send({code: 0, msg: '登陆成功'}); //使用res上定义的send方法
+     res.end();
+   });
+   router.on('/reg', (req, res)=>{
+     let {user, pass}=req.query;
+       res.send({code: 0, msg: '注册成功'});
+       res.end();
+     }
+   });
+   ```
+
+## 23 ejs 使用
+
+<%= 输出文字——转义输出(html 标签->html 实体)
+<%- 输出 html——非转义输出(html 标签->原样) -%>
+
+```js
+const express = require("express");
+const consolidate = require("consolidate"); //安装并引入模版引擎管理模块
+let server = express();
+server.listen(8080);
+
+//1.选择一种模板引擎
+server.engine("html", consolidate.ejs); //该模块指定要使用的模版引擎
+//2.指定模板文件的扩展名
+server.set("view engine", "ejs");
+//3.指定模板文件的路径
+server.set("views", "./template");
+
+server.get("/aaa", (req, res) => {
+  res.render("2", { arr: [12, 5, 88, 99] });
+});
+```
+
+## 24 使用 multer 上传文件
+
+```js
+const multer = require("multer"); //安装并引入
+
+//文件POST数据 配置
+let multerObj = multer({ dest: "./upload/" });
+server.use(multerObj.any());
+
+//以post方式提交文件时会自动将文件保存指定目录中，并可在req中获取保存后相关的文件信息
+for (let i = 0; i < req.files.length; i++) {
+  //上传多个文件
+  req.files;
+  req.files[i].fieldname;
+  req.files[i].filename;
+  req.files[i].path;
+}
+```
 
 # express
 
@@ -1624,7 +1974,7 @@ app.use(express.static(path.join(__dirname, 'public')), {
 });
 ```
 
-### 5.1 body-parser(需安装)
+### 5.1 body-parser(express已自带此功能)
 
 > 对post请求的请求体请进解析
 
@@ -2644,6 +2994,11 @@ SELECT * FROM users WHERE home='北京' ORDER BY age DESC
 SELECT * FROM users WHERE DAY(NOW()) = DAY(birthday) AND MONTH(NOW()) = MONTH(birthday)
 --根据生日查询年龄
 SELECT name,YEAR(NOW())-YEAR(birthday) FROM users
+--模糊搜索
+SELECT * FROM Persons WHERE City LIKE 'N%'   //搜索城市名为N开头
+SELECT * FROM Persons WHERE City LIKE '%g'   //搜索城市名为g结尾
+SELECT * FROM Persons WHERE City LIKE '%lon%'  //搜索城市名包含lon
+SELECT * FROM Persons WHERE City NOT LIKE '%lon%'  //搜索城市名不包含lon
 ```
 
 ### 2. 插入语句
